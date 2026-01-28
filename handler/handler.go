@@ -101,9 +101,6 @@ func HandleCurrencyConvert(ctx context.Context, b *bot.Bot, update *models.Updat
 }
 
 func StartHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	if update.Message == nil {
-		return
-	}
 	currency, err := fxratesapi.GetCurrencyRates("RUB")
 	if err != nil {
 		b.SendMessage(ctx, &bot.SendMessageParams{
