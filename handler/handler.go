@@ -14,8 +14,11 @@ import (
 )
 
 func HandleCurrencyConvert(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil {
+		return
+	}
 	msg := update.Message.Text
-	currencyFrom, currencyTo, err := utils.ParseCurrency(msg)
+	currencyFrom, err := utils.ParseCurrency(msg)
 
 	if err != nil {
 		b.SendMessage(ctx, &bot.SendMessageParams{
@@ -38,7 +41,7 @@ func HandleCurrencyConvert(ctx context.Context, b *bot.Bot, update *models.Updat
 		return
 	}
 
-	currency, err := fxratesapi.GetCurrencyRates()
+	currency, err := fxratesapi.GetCurrencyRates(currencyFrom)
 	if err != nil {
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
@@ -47,49 +50,83 @@ func HandleCurrencyConvert(ctx context.Context, b *bot.Bot, update *models.Updat
 		return
 	}
 
+	m := map[string]float32{
+		"RUB": float32(val) * currency.Rates.Rub,
+		"USD": float32(val) * currency.Rates.Usd,
+		"EUR": float32(val) * currency.Rates.Eur,
+		"TRY": float32(val) * currency.Rates.Try,
+		"AED": float32(val) * currency.Rates.Aed,
+	}
+
+	var messageToUser string
+	for k, v := range m {
+		if v != 0 {
+			messageToUser += fmt.Sprintf("%s: %.2f\n", k, v)
+		}
+	}
+
 	switch currencyFrom {
 	case "RUB":
-		res := float32(val) / currency.Rates.Rub
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   fmt.Sprintf("%d %s будет %.2f %s", val, currencyFrom, res, currencyTo),
+			Text:   messageToUser,
 		})
 		return
 	case "USD":
-		res := float32(val) * currency.Rates.Rub
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   fmt.Sprintf("%d %s будет %.2f %s", val, currencyFrom, res, currencyTo),
+			Text:   messageToUser,
 		})
 		return
 
 	case "AED":
-		res := (float32(val) * currency.Rates.Rub) / currency.Rates.Aed
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   fmt.Sprintf("%d %s будет %.2f %s", val, currencyFrom, res, currencyTo),
+			Text:   messageToUser,
 		})
 		return
 	case "TRY":
-		res := (float32(val) * currency.Rates.Rub) / currency.Rates.Try
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   fmt.Sprintf("%d %s будет %.2f %s", val, currencyFrom, res, currencyTo),
+			Text:   messageToUser,
 		})
 		return
 	case "EUR":
-		res := (float32(val) * currency.Rates.Rub) / currency.Rates.Eur
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   fmt.Sprintf("%d %s будет %.2f %s", val, currencyFrom, res, currencyTo),
+			Text:   messageToUser,
 		})
 		return
 	}
 }
 
 func StartHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil {
+		return
+	}
+	currency, err := fxratesapi.GetCurrencyRates("RUB")
+	if err != nil {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   err.Error(),
+		})
+		return
+	}
+
+	m := map[string]float32{
+		"USD": 1 / currency.Rates.Usd,
+		"EUR": 1 / currency.Rates.Eur,
+		"TRY": 1 / currency.Rates.Try,
+		"AED": 1 / currency.Rates.Aed,
+	}
+
+	var messageToUser string
+	for k, v := range m {
+		messageToUser += fmt.Sprintf("1 %s: %.2f RUB\n", k, v)
+	}
+
 	b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
-		Text:   "Привет! Я бот который отправит тебе курсы валют",
+		Text:   fmt.Sprintf("Привет! Я бот который отправит тебе курсы валют\n\n%s", messageToUser),
 	})
 }

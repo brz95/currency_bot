@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/brz95/currency_bot/utils"
 )
 
 type FxApiRatesResp struct {
@@ -15,12 +17,13 @@ type FxApiRatesResp struct {
 
 type FxApiRates struct {
 	Rub float32 `json:"RUB"`
+	Usd float32 `json:"USD"`
 	Aed float32 `json:"AED"`
 	Try float32 `json:"TRY"`
 	Eur float32 `json:"EUR"`
 }
 
-func GetCurrencyRates() (FxApiRatesResp, error) {
+func GetCurrencyRates(base string) (FxApiRatesResp, error) {
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "api.fxratesapi.com",
@@ -28,6 +31,9 @@ func GetCurrencyRates() (FxApiRatesResp, error) {
 	}
 
 	q := u.Query()
+	q.Set("base", base)
+	currencies := utils.SelectCurrencies(base)
+	q.Set("currencies", currencies)
 	q.Set("api_key", os.Getenv("FX_ACCESS_TOKEN"))
 	u.RawQuery = q.Encode()
 
